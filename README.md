@@ -1,4 +1,4 @@
-# JetsonNanoOrinScripts
+# Nvidia Jetson Nano Orin Scripts
 Helpful Scripts for Nvidia Jetson Nano Super
 
 ## PS4 - Controller Installation and Testing.
