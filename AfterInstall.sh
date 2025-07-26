@@ -8,3 +8,5 @@ echo "source ~/ros2_ws/src/install/setup.bash" >> ~/.bashrc
 
 # First, source #ROS2, then your workspace. Check with:
 nano ~/.bashrc
+
+# Test with a your own Node
