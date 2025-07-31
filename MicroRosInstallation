@@ -1,0 +1,19 @@
+#!/bin/bash
+#Install Micros for Communication beetween ESP32 and Nvidia Jetson Nano Orin
+
+# Create a workspace and download the micro-ROS tools
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
+git clone -b humble https://github.com/micro-ROS/micro_ros_agent.git || echo "micro_ros_agent already cloned"
+
+echo "Update dependencies using rosdep"
+rosdep update
+rosdep install -i --from-path . --rosdistro humble -y
+
+# Install pip
+sudo apt-get install python3-pip
+
+echo "Building workspace..."
+colcon build --packages-select micro_ros_setup
+
+source install/local_setup.bash
