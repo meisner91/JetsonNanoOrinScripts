@@ -22,9 +22,11 @@ source install/local_setup.bash
 # Check Installation
 ros2 pkg list
 
+git clone -b humble https://github.com/micro-ROS/micro_ros_agent.git || echo "micro_ros_agent already cloned"
 git clone -b humble https://github.com/micro-ROS/micro_ros_msgs.git || echo "micro_ros_msgs already cloned"
 
-
+colcon build --packages-select micro_ros_msgs
+colcon build --packages-select micro_ros_agent
 
 ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
 
