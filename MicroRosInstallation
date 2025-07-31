@@ -16,4 +16,10 @@ sudo apt-get install python3-pip
 echo "Building workspace..."
 colcon build --packages-select micro_ros_setup
 
+# Bash for the same Terminal
 source install/local_setup.bash
+
+# Check Installation
+ros2 pkg list
+
+ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
