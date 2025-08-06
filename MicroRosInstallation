@@ -1,5 +1,5 @@
 #!/bin/bash
-#Install Micros for Communication beetween ESP32 and Nvidia Jetson Nano Orin
+#Install micro-ros-agent for Communication beetween ESP32 and Nvidia Jetson Nano Orin (Ubuntu 22.04)
 
 # Create a workspace and download the micro-ROS tools
 mkdir -p ~/ros2_ws/src
@@ -31,6 +31,7 @@ colcon build --packages-select micro_ros_agent
 # Bash for the same Terminal
 source install/local_setup.bash
 
+# Test run, USB- not
 ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
 
 
