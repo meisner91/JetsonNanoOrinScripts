@@ -34,4 +34,19 @@ source install/local_setup.bash
 # Test run, USB- not found so find the right one!
 ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
 
+# Unplug the device
+ls /dev/tty* > before.txt
+
+# Plug in the device
+ls /dev/tty* > after.txt
+
+# Compare with diff command
+diff before.txt after.txt
+
+pip install pyserial
+python3 -m serial.tools.list_ports
+
+dmesg | grep ch341
+
+
 
