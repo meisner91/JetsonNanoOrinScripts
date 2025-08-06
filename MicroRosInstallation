@@ -31,7 +31,7 @@ colcon build --packages-select micro_ros_agent
 # Bash for the same Terminal
 source install/local_setup.bash
 
-# Test run, USB- not
+# Test run, USB- not found so find the right one!
 ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
 
 
