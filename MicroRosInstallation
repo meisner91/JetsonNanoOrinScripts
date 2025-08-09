@@ -58,6 +58,10 @@ sudo reboot
 ls /dev/ttyUSB*
 # it should show up
 
+# Add yourself to the dialout group
+sudo usermod -aG dialout $USER
+newgrp dialout   # or log out/in
+
 # Test run, USB- not found so find the right one!
 ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
 
