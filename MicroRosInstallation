@@ -34,6 +34,11 @@ source install/local_setup.bash
 # Test run, USB- not found so find the right one!
 ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
 
+# Remove brltty it 
+sudo apt remove --yes brltty
+sudo udevadm control --reload-rules && sudo udevadm trigger
+sudo reboot
+
 # Unplug the device
 ls /dev/tty* > before.txt
 
