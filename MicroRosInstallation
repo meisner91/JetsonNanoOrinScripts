@@ -65,5 +65,8 @@ newgrp dialout   # or log out/in
 # Test run, USB- not found so find the right one!
 ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
 
+###### Now it should be running ############
+#[1754717425.133137] info     | TermiosAgentLinux.cpp | init                     | running...             | fd: 3
+#[1754717425.133816] info     | Root.cpp           | set_verbose_level        | logger setup           | verbose_level: 4
 
 
