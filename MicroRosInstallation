@@ -31,41 +31,35 @@ colcon build --packages-select micro_ros_agent
 # Bash for the same Terminal
 source install/local_setup.bash
 
-# Test run, USB- not found so find the right one!
-ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
-
+####################################################################################
 # Many popular devices, such as the ESP32 interface with USB through a CH341 interface. 
 # The default configurationt of the Jetson Orin does not have this module installed.
 # Here's a quick walkthrough of how to get it running.
+######################################################################
 
 git clone https://github.com/jetsonhacks/jetson-orin-kernel-builder.git
 cd jetson-orin-kernel-builder/prebuilt/jetpack-6.2.1
 tar -xvf usb_serial_ch341.tar.xz
-pwd
-ls -l usb_serial_ch341/install_module_ch341.sh
+cd usb_serial_ch341
+ls -l install_module_ch341.sh
 
 # make it executable and run it
-chmod +x usb_serial_ch341/install_module_ch341.sh
-sudo ./usb_serial_ch341/install_module_ch341.sh
+chmod +x install_module_ch341.sh
+sudo ./install_module_ch341.sh
 
 # 2. Remove brltty it 
 sudo apt remove --yes brltty
 sudo udevadm control --reload-rules && sudo udevadm trigger
 sudo reboot
 
-# Unplug the device
-ls /dev/tty* > before.txt
+######################################################################
 
-# Plug in the device
-ls /dev/tty* > after.txt
+# Test the USB Connecion to the 
+ls /dev/ttyUSB*
+# it should show up
 
-# Compare with diff command
-diff before.txt after.txt
-
-pip install pyserial
-python3 -m serial.tools.list_ports
-
-dmesg | grep ch341
+# Test run, USB- not found so find the right one!
+ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
 
 
 
