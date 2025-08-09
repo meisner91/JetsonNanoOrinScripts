@@ -34,7 +34,7 @@ source install/local_setup.bash
 ####################################################################################
 # Many popular devices, such as the ESP32 interface with USB through a CH341 interface. 
 # The default configurationt of the Jetson Orin does not have this module installed.
-# Here's a quick walkthrough of how to get it running.
+# Here's a quick walkthrough of how to get it running. (Jetson Hacks)
 ######################################################################
 
 git clone https://github.com/jetsonhacks/jetson-orin-kernel-builder.git
