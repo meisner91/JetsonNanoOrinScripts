@@ -147,10 +147,12 @@ EOF
 systemctl --user daemon-reload
 systemctl --user enable micro-ros-agent-term.service
 systemctl --user enable teleop-term.service
+systemctl --user enable ros2-monitor-term.service
 
 # Start them now (they'll also auto-start after you log into the desktop)
 systemctl --user start micro-ros-agent-term.service
 systemctl --user start teleop-term.service
+systemctl --user start ros2-monitor-term.service
 
 echo
 echo "Done!"
