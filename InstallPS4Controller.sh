@@ -38,6 +38,7 @@ source install/setup.bash
 # Check Installation
 ros2 pkg list
 
+## Other way for pairing the Controller
 ################# Make a Pair and Connect the PS4 Controller for the first time
 # Wireless (Bluetooth) Connection
 # Make sure Bluetooth is enabled on your Jetson:
