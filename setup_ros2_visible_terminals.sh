@@ -82,9 +82,11 @@ ROS_SOURCE_CMDS="source /opt/ros/${ROS_DISTRO}/setup.bash; if [ -f \"${ROS_WS}/i
 
 AGENT_INNER_CMD="${ROS_SOURCE_CMDS}; ros2 run micro_ros_agent micro_ros_agent serial --dev ${SERIAL_DEV}"
 TELEOP_INNER_CMD="${ROS_SOURCE_CMDS}; sleep ${TELEOP_DELAY}; ros2 launch ${TELEOP_PKG} ${TELEOP_LAUNCH} topic_name:=${TELEOP_TOPIC} hw_type:=${TELEOP_HW} linear_speed:=${TELEOP_LINEAR} angular_speed:=${TELEOP_ANGULAR}"
+MONITOR_INNER_CMD="${ROS_SOURCE_CMDS}; echo '--- ROS 2 Node list ---'; ros2 node list; echo; echo '--- ROS 2 Topic list ---'; ros2 topic list; echo; echo '--- Live cmd_vel ---'; ros2 topic echo /cmd_vel"
 
 AGENT_EXECSTART="$(make_execstart "micro-ROS Agent" "${AGENT_INNER_CMD}")"
 TELEOP_EXECSTART="$(make_execstart "Teleop" "${TELEOP_INNER_CMD}")"
+MONITOR_EXECSTART="$(make_execstart "ROS2 Monitor" "${MONITOR_INNER_CMD}")"
 
 ### === Create user systemd unit files ===
 UNIT_DIR="${HOME}/.config/systemd/user"
@@ -92,6 +94,7 @@ mkdir -p "${UNIT_DIR}"
 
 AGENT_UNIT="${UNIT_DIR}/micro-ros-agent-term.service"
 TELEOP_UNIT="${UNIT_DIR}/teleop-term.service"
+MONITOR_UNIT="${UNIT_DIR}/ros2-monitor-term.service"
 
 cat > "${AGENT_UNIT}" <<EOF
 [Unit]
@@ -119,6 +122,22 @@ PartOf=graphical-session.target
 Type=simple
 ExecStart=${TELEOP_EXECSTART}
 Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target
+EOF
+
+cat > "${MONITOR_UNIT}" <<EOF
+[Unit]
+Description=ROS 2 Monitor in a visible terminal
+After=graphical-session.target teleop-term.service
+Wants=teleop-term.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=${MONITOR_EXECSTART}
+Restart=always
 
 [Install]
 WantedBy=graphical-session.target
