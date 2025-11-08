@@ -14,3 +14,6 @@ locale  # verify settings
 sudo apt update && sudo apt install gnupg wget
 sudo apt install software-properties-common
 sudo add-apt-repository universe
+
+
+wget -qO - http://isaac.download.nvidia.com/isaac-ros/repos.key  sudo apt-key add - grep qxF "deb https://isaac.dowload.nvidia.com/isaac-ros/release-3 $(lsb_release -c) release-3.0 /etc/apt/sources.list  
