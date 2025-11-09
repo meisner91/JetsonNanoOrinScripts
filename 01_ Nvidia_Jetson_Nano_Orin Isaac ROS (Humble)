@@ -17,8 +17,8 @@ sudo add-apt-repository universe
 # Setup Source
 # Register the GPG key ith apt
 wget -qO - http://isaac.download.nvidia.com/isaac-ros/repos.key | sudo apt-key add - 
-grep qxF "deb https://isaac.download.nvidia.com/isaac-ros/release-3 $(lsb_release -c) release-3.0" /etc/apt/sources.list || \
-echo "deb https://isaac.download.nvidia.com/isaac-ros/release-3 $(lsb_release -c) release-3.0" | sudo tee -a /etc/apt/sources.list
+grep qxF "deb https://isaac.download.nvidia.com/isaac-ros/release-3 $(lsb_release -cs) release-3.0" /etc/apt/sources.list || \
+echo "deb https://isaac.download.nvidia.com/isaac-ros/release-3 $(lsb_release -cs) release-3.0" | sudo tee -a /etc/apt/sources.list
 sudo apt-get update
 
 # Next, for all other ROS2 packages, ensure you have the official ROS apt repository sourced
