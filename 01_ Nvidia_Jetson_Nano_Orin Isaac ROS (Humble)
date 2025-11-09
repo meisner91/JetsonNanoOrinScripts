@@ -20,3 +20,8 @@ wget -qO - http://isaac.download.nvidia.com/isaac-ros/repos.key  sudo apt-key ad
 grep qxF "deb https://isaac.dowload.nvidia.com/isaac-ros/release-3 $(lsb_release -c) release-3.0" /etc/apt/sources.list || \
 echo "deb https://isaac.download.nvidia.com/isaac-ros/release-3 $(lsb_release -c) release-3.0" | sudo tee -a /etc/apt/sources.list
 sudo apt-get update
+
+sudo apt update && sudo apt install curl -y 
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://package.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
