@@ -43,7 +43,7 @@ sudo apt install ros-humble-ros-base
 sudo apt install ros-dev-tools
 
 # Source the setup files
-source /opt/ros/setup.bash
+source /opt/ros/humble/setup.bash
 
 # Add sourcing to your shell startup script
 echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
