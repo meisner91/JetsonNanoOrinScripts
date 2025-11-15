@@ -6,17 +6,11 @@ mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
 
 # Core diagnostics & joystick drivers (ROS 2 branch)
-if [ ! -d diagnostics ]; then
-  git clone https://github.com/ros/diagnostics.git -b ros2
-fi
-if [ ! -d joystick_drivers ]; then
-  git clone https://github.com/ros-drivers/joystick_drivers.git -b ros2
-fi
+git clone https://github.com/ros/diagnostics.git -b ros2
+git clone https://github.com/ros-drivers/joystick_drivers.git -b ros2
 
 # PS4 interface — default branch should work on Humble
-if [ ! -d PlayStation-JoyInterface-ROS2 ]; then
-  git clone https://github.com/HarvestX/PlayStation-JoyInterface-ROS2.git
-fi
+git clone https://github.com/HarvestX/PlayStation-JoyInterface-ROS2.git
 
 # Install Bluetooth & gamepad support libs
 sudo apt install -y libspnav-dev libbluetooth-dev libcwiid-dev
@@ -38,6 +32,18 @@ source install/setup.bash
 # Check Installation
 ros2 pkg list
 
+
+
+
+#Press and hold the PS + Share buttons on the PS4 controller until the light flashes.
+#After a moment, you should see the controller show up (e.g., Wireless Controller).
+#Pair and connect:
+
+#Testing with Controlling the cmd_vel node with the ps4 Controller
+ros2 launch p9n_bringup teleop.launch.py topic_name:=cmd_vel hw_type:=DualSense linear_speed:=1.0 angular_speed:=1.0
+
+
+################# ################# ################# ################# ################# ################# 
 ## Other way for pairing the Controller
 ################# Make a Pair and Connect the PS4 Controller for the first time
 # Wireless (Bluetooth) Connection
@@ -55,18 +61,3 @@ agent on
 default-agent
 scan on
 
-
-#Press and hold the PS + Share buttons on the PS4 controller until the light flashes.
-#After a moment, you should see the controller show up (e.g., Wireless Controller).
-
-#Pair and connect:
-
-pair <MAC_ADDRESS>
-connect <MAC_ADDRESS>
-trust <MAC_ADDRESS>
-quit
-
-#You should now have a joystick at /dev/input/js0.
-
-#Testing with Controlling the cmd_vel node with the ps4 Controller
-ros2 launch p9n_bringup teleop.launch.py topic_name:=cmd_vel hw_type:=DualSense linear_speed:=1.0 angular_speed:=1.0
