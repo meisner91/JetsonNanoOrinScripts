@@ -59,7 +59,23 @@ git checkout v2.55.1
 
 ---
 
-## 4. Install udev Rules (Required)
+## 4.0 Install udev Rules (Required)
+### Install v4l-utils
+```bash
+sudo apt update
+sudo apt install v4l-utils -y
+```
+Reload rules
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+Now you should see the camera
+```bash
+v4l2-ctl --list-devices
+```
+
+## 4.1 Install udev Rules (Required)
 
 This allows access to the camera without root.
 
