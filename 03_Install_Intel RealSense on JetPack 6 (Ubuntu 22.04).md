@@ -50,32 +50,32 @@ git clone https://github.com/IntelRealSense/librealsense.git
 cd librealsense
 ```
 
-(Optional but recommended: checkout a stable release)
+### ⚠️ Version Pinning (IMPORTANT – prevents future breakage)
+
+To avoid future updates breaking camera detection, **DO NOT use `master`**.
+Pin librealsense to a known stable version and keep it fixed.
+
+**Recommended versions for JetPack 6:**
+
+* **v2.55.1** (most stable on Jetson)
+* **v2.56.4** (works, but stricter about USB / permissions)
 
 ```bash
-git tag
+git fetch --tags
 git checkout v2.55.1
 ```
 
+🔒 Optional: prevent accidental git updates
+
+```bash
+git status
+```
+
+(Do not run `git pull` unless you explicitly want to upgrade.)
+
 ---
 
-## 4.0 Install udev Rules (Required)
-### Install v4l-utils
-```bash
-sudo apt update
-sudo apt install v4l-utils -y
-```
-Reload rules
-```bash
-sudo udevadm control --reload-rules
-sudo udevadm trigger
-```
-Now you should see the camera
-```bash
-v4l2-ctl --list-devices
-```
-
-## 4.1 Install udev Rules (Required)
+## 4. Install udev Rules (Required)
 
 This allows access to the camera without root.
 
@@ -106,10 +106,11 @@ cmake .. \
   -DFORCE_RSUSB_BACKEND=ON \
   -DBUILD_WITH_CUDA=ON \
   -DBUILD_EXAMPLES=ON \
-  -DBUILD_GRAPHICAL_EXAMPLES=ON
+  -DBUILD_GRAPHICAL_EXAMPLES=ON \
+  -DBUILD_PYTHON_BINDINGS=ON
 ```
 
-> ✅ `FORCE_RSUSB_BACKEND=ON` is **critical** for JetPack 6 stability.
+> ✅ `FORCE_RSUSB_BACKEND=ON` is **mandatory** on JetPack 6
 
 ### Compile and install
 
@@ -126,13 +127,17 @@ sudo ldconfig
 
 ---
 
+````
+
+---
+
 ## 6. Test RealSense SDK (Non-ROS)
 
 Plug in your RealSense camera and run:
 
 ```bash
 realsense-viewer
-```
+````
 
 You should see:
 
@@ -178,6 +183,16 @@ Intel provides **prebuilt ROS 2 packages** for Humble.
 sudo apt update
 sudo apt install ros-humble-realsense2-* -y
 ```
+
+### 🔒 Prevent ROS updates from replacing librealsense
+
+ROS ships its **own librealsense**. To avoid conflicts:
+
+```bash
+sudo apt-mark hold ros-humble-realsense2-* librealsense2*
+```
+
+This ensures updates will **not overwrite your working setup**.
 
 Verify installation:
 
@@ -227,12 +242,42 @@ Add:
 
 ## 11. Known JetPack 6 Issues & Workarounds
 
-| Issue                   | Solution                       |
-| ----------------------- | ------------------------------ |
-| Viewer shows no streams | Use RSUSB backend              |
-| USB disconnects         | Use powered USB hub            |
-| High CPU usage          | Lower FPS / resolution         |
-| ROS node not starting   | Check `realsense-viewer` first |
+| Issue                          | Cause                                     | Solution                                   |
+| ------------------------------ | ----------------------------------------- | ------------------------------------------ |
+| Camera disappears after update | librealsense version changed              | Pin git tag + `apt-mark hold`              |
+| RGB stream fails               | RGB8 not exposed on Jetson                | Use **YUYV**, convert in software          |
+| IMU disabled                   | HID interface unavailable via RSUSB       | Normal on Jetson; see note below           |
+| Viewer works, ROS does not     | Library conflict (/opt/ros vs /usr/local) | Enforce `/usr/local` via `LD_LIBRARY_PATH` |
+| Device only works with sudo    | Permissions                               | udev rules + `plugdev`, `video` groups     |
+| Camera unstable                | USB power / cable                         | USB3 port + powered hub                    |
+
+### ℹ️ IMU (D435i) Notes
+
+* D435i IMU uses **HID** interface
+* On Jetson + RSUSB, IMU may be:
+
+  * Disabled
+  * Unstable
+  * Missing in ROS
+
+This is **expected behavior** on many Jetson systems.
+
+✅ Depth + Color are fully supported and sufficient for:
+
+* Navigation
+* Obstacle avoidance
+* SLAM
+
+If IMU is critical, consider:
+
+* External IMU
+* Fusing with robot IMU instead
+
+----|----|
+| Viewer shows no streams | Use RSUSB backend |
+| USB disconnects | Use powered USB hub |
+| High CPU usage | Lower FPS / resolution |
+| ROS node not starting | Check `realsense-viewer` first |
 
 ---
 
@@ -247,13 +292,123 @@ Add:
 
 ---
 
+## 13. Common Problems & Fixes
+
+### Problem: RealSense Viewer says "UDEV-Rules are missing"
+
+**Symptoms:**
+
+* `realsense-viewer` starts but shows no camera
+* Warning: *RealSense UDEV-Rules are missing*
+
+**Fix:**
+
+1. Ensure the udev rules file exists:
+
+```bash
+ls -l /etc/udev/rules.d/ | grep -i realsense
+```
+
+2. If missing, copy it manually from the librealsense repository:
+
+```bash
+cd ~/librealsense
+sudo cp ./config/99-realsense-libusb.rules /etc/udev/rules.d/
+sudo chmod 644 /etc/udev/rules.d/99-realsense-libusb.rules
+```
+
+3. Reload udev rules and replug the camera:
+
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+4. Add user to required groups and re-login:
+
+```bash
+sudo usermod -aG plugdev,video $USER
+```
+
+---
+
+### Problem: RGB stream not working ("Failed to resolve request: RGB8")
+
+**Typical error message:**
+
+```
+Invalid Value in rs2_open_multiple(...)
+Requested: RGB8 1280x720
+Available: YUYV
+```
+
+**Cause:**
+On JetPack 6 (RSUSB backend), the RealSense D435/D435i usually exposes the **color stream as YUYV**, not RGB8. Requesting RGB8 causes the stream negotiation to fail.
+
+**Fix (Recommended):**
+
+* Use **YUYV** as the color format
+* Let the application/viewer convert to RGB if needed
+
+**In realsense-viewer:**
+
+* Color → Format: `YUYV`
+* Resolution: `1280x720`
+* FPS: `30`
+
+**In ROS 2:**
+
+```bash
+ros2 launch realsense2_camera rs_launch.py rgb_camera.profile:=1280x720x30
+```
+
+Do **not** force RGB8. Convert to RGB downstream if required.
+
+---
+
+### Problem: Camera detected only with sudo
+
+**Cause:**
+Missing permissions or udev rules not applied
+
+**Fix:**
+
+* Reinstall udev rules
+* Reload udev
+* Re-login or reboot
+
+---
+
+### Problem: Camera not detected at all
+
+**Checks:**
+
+```bash
+lsusb | grep -i intel
+lsusb -t
+```
+
+Ensure the camera is connected via **USB 3 (5000M)**.
+Use a **good USB 3 cable** or a **powered USB hub**.
+
+---
+
 ## Summary
 
-✅ **Recommended for JetPack 6**
+✅ **Stable, update-safe JetPack 6 setup**
 
-* Build librealsense from source
-* Use **RSUSB backend**
-* Avoid kernel patching
-* Use ROS 2 Humble binary packages
+* librealsense **pinned to a fixed git tag** (no master)
+* RSUSB backend **forced**
+* Kernel patching **disabled**
+* ROS packages **held** to prevent overwrites
+* RGB via **YUYV** (not RGB8)
+* Depth fully supported
+* IMU support limited on Jetson (expected)
 
-This setup is **stable and widely used on Jetson Orin Nano**.
+This configuration is **proven stable** on:
+
+* Jetson Orin Nano
+* JetPack 6
+* RealSense D435i
+
+🚫 Avoid system updates that touch librealsense unless you intentionally want to upgrade.
