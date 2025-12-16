@@ -62,7 +62,7 @@ Pin librealsense to a known stable version and keep it fixed.
 
 ```bash
 git fetch --tags
-git checkout v2.55.1
+git checkout v2.56.4
 ```
 
 🔒 Optional: prevent accidental git updates
