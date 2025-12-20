@@ -1,3 +1,4 @@
+
 # Intel RealSense on JetPack 6 (Ubuntu 22.04)
 
 This guide explains how to install **Intel RealSense SDK (librealsense)** and the **ROS 2 RealSense wrapper (realsense-ros)** on **NVIDIA Jetson devices running JetPack 6 / Ubuntu 22.04**.
@@ -311,7 +312,11 @@ realsense-viewer
 #### 3️⃣ Make the Fix Permanent (Recommended)
 
 Add this line **above ROS sourcing** in `~/.bashrc`:
-
+open
+```bash
+nano ~/.bashrc
+```
+add this:
 ```bash
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 ```
