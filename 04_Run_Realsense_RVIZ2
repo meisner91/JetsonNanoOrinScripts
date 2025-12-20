@@ -1,1 +1,85 @@
 
+ros2 launch realsense2_camera rs_launch.py \
+  enable_depth:=true enable_color:=true \
+  pointcloud.enable:=true
+
+
+ros2 topic hz /camera/camera/depth/image_rect_raw
+ros2 topic hz /camera/camera/color/image_raw
+
+rviz2
+
+ros2 topic echo --once /camera/camera/depth/color/points | grep frame_id
+
+
+-> framename
+
+/camera/camera/depth/color/points
+
+morris@ubuntu:~$ ros2 topic echo --once /tf_static
+transforms:
+- header:
+    stamp:
+      sec: 1766245721
+      nanosec: 456589059
+    frame_id: camera_link
+  child_frame_id: camera_depth_frame
+  transform:
+    translation:
+      x: 0.0
+      y: -0.0
+      z: -0.0
+    rotation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+- header:
+    stamp:
+      sec: 1766245721
+      nanosec: 456589059
+    frame_id: camera_depth_frame
+  child_frame_id: camera_depth_optical_frame
+  transform:
+    translation:
+      x: 0.0
+      y: -0.0
+      z: -0.0
+    rotation:
+      x: -0.5
+      y: 0.4999999999999999
+      z: -0.5
+      w: 0.5000000000000001
+- header:
+    stamp:
+      sec: 1766245721
+      nanosec: 562004067
+    frame_id: camera_link
+  child_frame_id: camera_color_frame
+  transform:
+    translation:
+      x: 3.609132909332402e-05
+      y: 0.014986380003392696
+      z: -4.7496461775153875e-05
+    rotation:
+      x: 0.001953952480107546
+      y: 0.00019956026517320424
+      z: 0.0009107418009079993
+      w: 0.9999976754188538
+- header:
+    stamp:
+      sec: 1766245721
+      nanosec: 562004067
+    frame_id: camera_color_frame
+  child_frame_id: camera_color_optical_frame
+  transform:
+    translation:
+      x: 0.0
+      y: -0.0
+      z: -0.0
+    rotation:
+      x: -0.5
+      y: 0.4999999999999999
+      z: -0.5
+      w: 0.5000000000000001
+---
