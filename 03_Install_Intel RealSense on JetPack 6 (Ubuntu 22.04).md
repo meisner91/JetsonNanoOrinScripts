@@ -133,6 +133,7 @@ Plug in your RealSense camera and run:
 
 ```bash
 realsense-viewer
+
 ```
 
 You should see:
