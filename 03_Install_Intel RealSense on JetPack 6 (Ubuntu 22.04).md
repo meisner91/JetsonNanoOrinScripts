@@ -121,10 +121,6 @@ Refresh linker cache:
 ```bash
 sudo ldconfig
 ```
-
----
-```
-
 ---
 
 ## 6. Test RealSense SDK (Non-ROS)
@@ -133,7 +129,6 @@ Plug in your RealSense camera and run:
 
 ```bash
 realsense-viewer
-
 ```
 
 You should see:
