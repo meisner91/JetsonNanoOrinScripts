@@ -51,6 +51,41 @@ This determines:
 - which tag (`jetson_XX.Y.Z`) must be checked out
 
 ---
+# Jetson Linux 36.4.4 BSP + Kernel Sources (R36.4.7)
+
+This guide shows how to obtain and extract the NVIDIA Jetson Linux
+Driver Package (BSP) and sync the correct kernel sources for
+**Jetson Linux R36.4.7** (matching your `/etc/nv_tegra_release`).
+
+This applies to JetPack **6.2.1 / L4T R36.4.4** systems. :contentReference[oaicite:2]{index=2}
+
+---
+
+## 1) Download the BSP
+
+From the NVIDIA Jetson Linux 36.4.4 release page:
+
+👉 https://developer.nvidia.com/embedded/jetson-linux-r3644
+
+Download:
+
+- **Driver Package (BSP)**  
+  `Jetson_Linux_R36.4.4_aarch64.tbz2`  
+  (this contains the `Linux_for_Tegra` directory with tools/scripts)
+
+📌 *Do not try to directly paste the URL into the browser — NVIDIA download servers require
+click-through from the release page.* :contentReference[oaicite:3]{index=3}
+
+---
+
+## 2) Extract the BSP
+
+Assuming you downloaded it to `~/Downloads`:
+
+```bash
+mkdir -p ~/l4t
+cd ~/l4t
+tar xf ~/Downloads/Jetson_Linux_R36.4.4_aarch64.tbz2
 
 ## 3️⃣ Install build dependencies
 
