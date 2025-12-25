@@ -85,7 +85,7 @@ Assuming you downloaded it to `~/Downloads`:
 ```bash
 cd ~/Downloads
 tar -xvf Jetson_Linux_R36.4.4_aarch64.tbz2
-```bash
+```
 
 4. Verify BSP directory structure
 ```bash
