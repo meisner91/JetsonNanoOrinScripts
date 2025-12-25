@@ -83,9 +83,39 @@ click-through from the release page.* :contentReference[oaicite:3]{index=3}
 Assuming you downloaded it to `~/Downloads`:
 
 ```bash
-mkdir -p ~/l4t
-cd ~/l4t
-tar xf ~/Downloads/Jetson_Linux_R36.4.4_aarch64.tbz2
+cd ~/Downloads
+tar -xvf Jetson_Linux_R36.4.4_aarch64.tbz2
+```bash
+
+4. Verify BSP directory structure
+```bash
+ls ~/Downloads/Linux_for_Tegra
+```
+
+You should see:
+```bash
+apply_binaries.sh
+bootloader/
+flash.sh
+source/
+```
+5. Sync kernel sources for R36.4.7
+```bash
+cd ~/Downloads/Linux_for_Tegra/source
+./source_sync.sh -t jetson_36.4.7
+```
+
+This downloads the exact kernel sources matching your running system.
+
+6. Verify kernel source location
+```bash
+ls ~/Downloads/Linux_for_Tegra/source/public/kernel/
+```
+
+Expected output:
+
+kernel-jammy-src
+
 
 ## 3️⃣ Install build dependencies
 
