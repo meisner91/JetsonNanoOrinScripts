@@ -3,8 +3,8 @@
 
 This procedure is inspired by the JetsonHacks tutorials, in particular the videos commonly referenced as:
 
-Build Jetson Orin Kernel & Modules Now
 
+*[Build Jetson Orin Kernel & Modules Now](https://www.youtube.com/watch?v=7P6I2jeJNYo)*
 Building Kernel Modules on NVIDIA Jetson
 
 from JetsonHacks.
