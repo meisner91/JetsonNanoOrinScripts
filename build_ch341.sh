@@ -135,7 +135,8 @@ make -C "${KSRC_DIR}" modules_prepare
 
 # ---- 7) Enable CH341 as module ----
 log "Enabling CONFIG_USB_SERIAL=y and CONFIG_USB_SERIAL_CH341=m ..."
-"${KSRC_DIR}/scripts/config" --file "${KSRC_DIR}/.config" --enable USB_SERIAL
+# USB_SERIAL must be a module if CH341 is a module
+"${KSRC_DIR}/scripts/config" --file "${KSRC_DIR}/.config" --module USB_SERIAL
 "${KSRC_DIR}/scripts/config" --file "${KSRC_DIR}/.config" --module USB_SERIAL_CH341
 make -C "${KSRC_DIR}" olddefconfig
 
