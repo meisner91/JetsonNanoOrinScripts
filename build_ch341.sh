@@ -57,6 +57,9 @@ apt-get install -y \
   libssl-dev libelf-dev dwarves \
   bzip2 xz-utils tar
 
+# (Recommended) headers provide Module.symvers and correct build metadata
+apt-get install -y nvidia-l4t-kernel-headers || true
+
 # ---- 3) Download public_sources.tbz2 ----
 WORKDIR="/tmp/ch341_build_$$"
 mkdir -p "${WORKDIR}"
@@ -119,39 +122,42 @@ zcat /proc/config.gz > "${KSRC_DIR}/.config"
 log "Setting LOCALVERSION to match uname -r (${LOCALVERSION})..."
 "${KSRC_DIR}/scripts/config" --file "${KSRC_DIR}/.config" --set-str LOCALVERSION "${LOCALVERSION}"
 
+# Try to provide Module.symvers to avoid modpost unresolved symbol spam
+if [[ -f "/lib/modules/${KREL}/build/Module.symvers" ]]; then
+  log "Copying Module.symvers from installed headers..."
+  cp -f "/lib/modules/${KREL}/build/Module.symvers" "${KSRC_DIR}/Module.symvers" || true
+fi
+
 log "Preparing kernel tree..."
 make -C "${KSRC_DIR}" olddefconfig
 make -C "${KSRC_DIR}" prepare
 make -C "${KSRC_DIR}" modules_prepare
 
-# ---- 7) Enable + build CH341 ----
+# ---- 7) Enable CH341 as module ----
 log "Enabling CONFIG_USB_SERIAL=y and CONFIG_USB_SERIAL_CH341=m ..."
 "${KSRC_DIR}/scripts/config" --file "${KSRC_DIR}/.config" --enable USB_SERIAL
 "${KSRC_DIR}/scripts/config" --file "${KSRC_DIR}/.config" --module USB_SERIAL_CH341
 make -C "${KSRC_DIR}" olddefconfig
 
-log "Building USB serial modules (includes ch341)..."
-make -C "${KSRC_DIR}" -j"$(nproc)" M=drivers/usb/serial modules
+# ---- 8) Locate CH341 source + build correct directory ----
+log "Locating ch341 source in kernel tree..."
+CH341_C_PATH="$(find "${KSRC_DIR}" -type f -name 'ch341.c' | head -n1 || true)"
+[[ -n "${CH341_C_PATH}" ]] || die "Could not find ch341.c in kernel sources. (Unexpected for Linux 5.15.)"
 
-CHKO="${KSRC_DIR}/drivers/usb/serial/ch341.ko"
-[[ -f "${CHKO}" ]] || die "Build finished but ${CHKO} not found."
+CH341_DIR_REL="$(dirname "${CH341_C_PATH}" | sed "s|^${KSRC_DIR}/||")"
+log "Found ch341.c at: ${CH341_DIR_REL}/ch341.c"
+log "Building modules in: M=${CH341_DIR_REL}"
 
-# ---- 8) Install ch341.ko ----
-log "Installing ch341.ko into /lib/modules/${KREL}/ ..."
-install -D -m 644 "${CHKO}" "/lib/modules/${KREL}/kernel/drivers/usb/serial/ch341.ko"
-depmod -a
+make -C "${KSRC_DIR}" -j"$(nproc)" M="${CH341_DIR_REL}" modules
 
-log "Trying to load module (modprobe ch341)..."
-modprobe ch341 || true
+# Find produced module
+CHKO="$(find "${KSRC_DIR}/${CH341_DIR_REL}" -maxdepth 1 -type f -name 'ch341.ko' | head -n1 || true)"
+[[ -n "${CHKO}" ]] || die "Build finished but ch341.ko not found in ${CH341_DIR_REL}."
 
-# ---- 9) Purge brltty ----
-log "Purging brltty (common conflict with CH341 USB serial adapters)..."
-apt-get purge -y brltty || true
-apt-get autoremove -y || true
+# ---- 9) Install ch341.ko to matching path ----
+INSTALL_REL="drivers/${CH341_DIR_REL#drivers/}/ch341.ko"
+DEST="/lib/modules/${KREL}/kernel/${INSTALL_REL}"
 
-log "Done."
-echo "Next:"
-echo "  - Plug your CH341 device"
-echo "  - Check: dmesg | tail -100"
-echo "  - Check: ls -l /dev/ttyUSB*"
-echo "If you want to reboot now: sudo reboot"
+log "Installing ch341.ko to: ${DEST}"
+install -D -m 644
+::contentReference[oaicite:1]{index=1}
