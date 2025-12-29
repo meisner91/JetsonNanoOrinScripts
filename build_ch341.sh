@@ -1,164 +1,140 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Fully automatic:
-#   detect L4T release -> download matching public_sources.tbz2
-#   -> extract kernel sources -> enable/build ch341 -> install -> depmod
-#   -> purge brltty
-#
-# Optional override:
-#   L4T_REV_OVERRIDE=4.4 ./build_ch341.sh
-#
-# Usage:
-#   chmod +x build_ch341.sh
-#   ./build_ch341.sh
-
 log() { echo -e "\n==> $*\n"; }
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-# Re-exec as root
+# Re-run as root
 if [[ "${EUID}" -ne 0 ]]; then
   exec sudo -E bash "$0" "$@"
 fi
 
-# ---- 1) Detect running kernel + L4T release ----
+# ------------------------------------------------------------
+# 1) Detect kernel + Jetson Linux version
+# ------------------------------------------------------------
 KREL="$(uname -r)"
-LOCALVERSION="-${KREL#*-}"  # 5.15.148-tegra -> -tegra
+LOCALVERSION="-${KREL#*-}"
 
-log "Detected running kernel: ${KREL}"
-log "Using LOCALVERSION: ${LOCALVERSION}"
+log "Kernel: ${KREL}"
+log "LOCALVERSION: ${LOCALVERSION}"
 
-NV_REL_FILE="/etc/nv_tegra_release"
-[[ -f "${NV_REL_FILE}" ]] || die "Missing ${NV_REL_FILE}. Are you on Jetson Linux?"
+NV_REL="/etc/nv_tegra_release"
+[[ -f "${NV_REL}" ]] || die "Not a Jetson system"
 
-R_MAJOR="$(grep -oE 'R[0-9]+' "${NV_REL_FILE}" | head -n1 | tr -d 'R' || true)"
-REVISION="$(grep -oE 'REVISION: *[0-9]+(\.[0-9]+)+' "${NV_REL_FILE}" | head -n1 | awk -F': *' '{print $2}' || true)"
-
-[[ -n "${R_MAJOR}" ]] || die "Could not parse Rxx from ${NV_REL_FILE}"
-[[ -n "${REVISION}" ]] || die "Could not parse REVISION from ${NV_REL_FILE}"
-
-# Trim revision to major.minor (e.g., 4.7.1 -> 4.7)
+R_MAJOR="$(grep -oE 'R[0-9]+' "${NV_REL}" | tr -d 'R')"
+REVISION="$(grep -oE 'REVISION: *[0-9]+(\.[0-9]+)+' "${NV_REL}" | awk -F': *' '{print $2}')"
 REV_TRIM2="$(echo "${REVISION}" | awk -F. '{print $1"."$2}')"
 
-# Allow forcing the revision (e.g. user wants 4.4)
+# Optional override
 if [[ -n "${L4T_REV_OVERRIDE:-}" ]]; then
-  log "L4T_REV_OVERRIDE is set -> forcing revision to: ${L4T_REV_OVERRIDE}"
+  log "Forcing L4T revision to ${L4T_REV_OVERRIDE}"
   REV_TRIM2="${L4T_REV_OVERRIDE}"
 fi
 
-log "Detected Jetson Linux: R${R_MAJOR}, REVISION ${REVISION} (download v${REV_TRIM2})"
+log "Jetson Linux: R${R_MAJOR} v${REV_TRIM2}"
 
-# ---- 2) Install build dependencies ----
-log "Installing build dependencies..."
+# ------------------------------------------------------------
+# 2) Dependencies
+# ------------------------------------------------------------
+log "Installing dependencies..."
 apt-get update -y
 apt-get install -y \
-  ca-certificates curl \
+  curl ca-certificates \
   build-essential bc flex bison \
   libssl-dev libelf-dev dwarves \
-  bzip2 xz-utils tar
+  bzip2 xz-utils tar \
+  nvidia-l4t-kernel-headers || true
 
-# (Recommended) headers provide Module.symvers and correct build metadata
-apt-get install -y nvidia-l4t-kernel-headers || true
-
-# ---- 3) Download public_sources.tbz2 ----
-WORKDIR="/tmp/ch341_build_$$"
+# ------------------------------------------------------------
+# 3) Download public_sources.tbz2
+# ------------------------------------------------------------
+WORKDIR="/tmp/ch341_build"
+rm -rf "${WORKDIR}"
 mkdir -p "${WORKDIR}"
 cd "${WORKDIR}"
 
-PSRC="public_sources.tbz2"
+URL="https://developer.download.nvidia.com/embedded/L4T/r${R_MAJOR}_Release_v${REV_TRIM2}/sources/public_sources.tbz2"
 
-URL_CANDIDATES=(
-  # Newer host/path style (capitalization matters)
-  "https://developer.download.nvidia.com/embedded/L4T/r${R_MAJOR}_Release_v${REV_TRIM2}/sources/public_sources.tbz2"
+log "Downloading kernel sources:"
+log "${URL}"
 
-  # Older host/path style
-  "https://developer.nvidia.com/downloads/embedded/l4t/r${R_MAJOR}_release_v${REV_TRIM2}/sources/public_sources.tbz2"
-  "https://developer.nvidia.com/embedded/l4t/r${R_MAJOR}_release_v${REV_TRIM2}/sources/public_sources.tbz2"
-)
+curl -fL --retry 3 -o public_sources.tbz2 "${URL}" \
+  || die "Download failed"
 
-download_ok="false"
-for url in "${URL_CANDIDATES[@]}"; do
-  log "Trying download: ${url}"
-  rm -f "${PSRC}"
-  if curl -fL --retry 3 --retry-delay 2 -o "${PSRC}" "${url}"; then
-    # reject tiny "not found" downloads
-    sz="$(stat -c%s "${PSRC}" 2>/dev/null || echo 0)"
-    if [[ "${sz}" -lt 1000000 ]]; then
-      log "Downloaded file is too small (${sz} bytes). Likely an error page. Trying next URL..."
-      continue
-    fi
-    download_ok="true"
-    log "Downloaded: ${PSRC} (${sz} bytes)"
-    break
-  fi
-done
+[[ "$(stat -c%s public_sources.tbz2)" -gt 1000000 ]] \
+  || die "Downloaded file too small"
 
-[[ "${download_ok}" == "true" ]] || die "Failed to download public_sources.tbz2 for R${R_MAJOR} v${REV_TRIM2}.
-Tip: run 'cat /etc/nv_tegra_release' and consider L4T_REV_OVERRIDE=4.4"
+bzip2 -t public_sources.tbz2
 
-log "Sanity-checking archive (bzip2 test)..."
-bzip2 -t "${PSRC}" || die "Downloaded file appears corrupted (bzip2 test failed)."
+# ------------------------------------------------------------
+# 4) Extract kernel sources
+# ------------------------------------------------------------
+log "Extracting kernel_src.tbz2..."
+tar -xvf public_sources.tbz2 Linux_for_Tegra/source/kernel_src.tbz2 --strip-components=2
 
-# ---- 4) Extract kernel_src.tbz2 ----
-log "Extracting kernel_src.tbz2 from public_sources.tbz2..."
-tar -xvf "${PSRC}" "Linux_for_Tegra/source/kernel_src.tbz2" --strip-components=2
-[[ -f "kernel_src.tbz2" ]] || die "kernel_src.tbz2 was not extracted (archive layout changed?)."
-
-# ---- 5) Extract kernel sources into /usr/src/kernel ----
-log "Installing kernel sources to /usr/src/kernel ..."
 rm -rf /usr/src/kernel
 mkdir -p /usr/src
-tar -xvf "kernel_src.tbz2" -C /usr/src/
+tar -xvf kernel_src.tbz2 -C /usr/src/
 
-KSRC_DIR="$(find /usr/src/kernel -maxdepth 2 -type d -name 'kernel-*-src' | head -n1 || true)"
-[[ -n "${KSRC_DIR}" ]] || die "Could not find kernel source dir under /usr/src/kernel (expected kernel-*-src)."
-log "Kernel source directory: ${KSRC_DIR}"
+KSRC="$(find /usr/src/kernel -maxdepth 2 -type d -name 'kernel-*-src' | head -n1)"
+[[ -n "${KSRC}" ]] || die "Kernel source dir not found"
 
-# ---- 6) Prepare config ----
-log "Copying running kernel config into source tree..."
-[[ -f /proc/config.gz ]] || die "/proc/config.gz not found."
-zcat /proc/config.gz > "${KSRC_DIR}/.config"
+log "Kernel source dir: ${KSRC}"
 
-log "Setting LOCALVERSION to match uname -r (${LOCALVERSION})..."
-"${KSRC_DIR}/scripts/config" --file "${KSRC_DIR}/.config" --set-str LOCALVERSION "${LOCALVERSION}"
+# ------------------------------------------------------------
+# 5) Prepare kernel config
+# ------------------------------------------------------------
+log "Preparing kernel config..."
+zcat /proc/config.gz > "${KSRC}/.config"
 
-# Try to provide Module.symvers to avoid modpost unresolved symbol spam
+"${KSRC}/scripts/config" --file "${KSRC}/.config" --set-str LOCALVERSION "${LOCALVERSION}"
+
+# IMPORTANT FIX
+"${KSRC}/scripts/config" --file "${KSRC}/.config" --module USB_SERIAL
+"${KSRC}/scripts/config" --file "${KSRC}/.config" --module USB_SERIAL_CH341
+
+make -C "${KSRC}" olddefconfig
+make -C "${KSRC}" prepare
+make -C "${KSRC}" modules_prepare
+
+# Copy Module.symvers if available
 if [[ -f "/lib/modules/${KREL}/build/Module.symvers" ]]; then
-  log "Copying Module.symvers from installed headers..."
-  cp -f "/lib/modules/${KREL}/build/Module.symvers" "${KSRC_DIR}/Module.symvers" || true
+  cp /lib/modules/${KREL}/build/Module.symvers "${KSRC}/Module.symvers"
 fi
 
-log "Preparing kernel tree..."
-make -C "${KSRC_DIR}" olddefconfig
-make -C "${KSRC_DIR}" prepare
-make -C "${KSRC_DIR}" modules_prepare
+# ------------------------------------------------------------
+# 6) Locate + build CH341
+# ------------------------------------------------------------
+log "Locating ch341.c..."
+CH341_C="$(find "${KSRC}" -name ch341.c | head -n1)"
+[[ -n "${CH341_C}" ]] || die "ch341.c not found"
 
-# ---- 7) Enable CH341 as module ----
-log "Enabling CONFIG_USB_SERIAL=y and CONFIG_USB_SERIAL_CH341=m ..."
-# USB_SERIAL must be a module if CH341 is a module
-"${KSRC_DIR}/scripts/config" --file "${KSRC_DIR}/.config" --module USB_SERIAL
-"${KSRC_DIR}/scripts/config" --file "${KSRC_DIR}/.config" --module USB_SERIAL_CH341
-make -C "${KSRC_DIR}" olddefconfig
+CH341_DIR="$(dirname "${CH341_C}" | sed "s|^${KSRC}/||")"
+log "Building CH341 in: ${CH341_DIR}"
 
-# ---- 8) Locate CH341 source + build correct directory ----
-log "Locating ch341 source in kernel tree..."
-CH341_C_PATH="$(find "${KSRC_DIR}" -type f -name 'ch341.c' | head -n1 || true)"
-[[ -n "${CH341_C_PATH}" ]] || die "Could not find ch341.c in kernel sources. (Unexpected for Linux 5.15.)"
+make -C "${KSRC}" -j"$(nproc)" M="${CH341_DIR}" modules
 
-CH341_DIR_REL="$(dirname "${CH341_C_PATH}" | sed "s|^${KSRC_DIR}/||")"
-log "Found ch341.c at: ${CH341_DIR_REL}/ch341.c"
-log "Building modules in: M=${CH341_DIR_REL}"
+CH341_KO="$(find "${KSRC}/${CH341_DIR}" -name ch341.ko | head -n1)"
+[[ -n "${CH341_KO}" ]] || die "ch341.ko not produced"
 
-make -C "${KSRC_DIR}" -j"$(nproc)" M="${CH341_DIR_REL}" modules
+# ------------------------------------------------------------
+# 7) Install module
+# ------------------------------------------------------------
+DEST="/lib/modules/${KREL}/kernel/${CH341_DIR}/ch341.ko"
+log "Installing to ${DEST}"
 
-# Find produced module
-CHKO="$(find "${KSRC_DIR}/${CH341_DIR_REL}" -maxdepth 1 -type f -name 'ch341.ko' | head -n1 || true)"
-[[ -n "${CHKO}" ]] || die "Build finished but ch341.ko not found in ${CH341_DIR_REL}."
+install -D -m 644 "${CH341_KO}" "${DEST}"
+depmod -a
+modprobe ch341 || true
 
-# ---- 9) Install ch341.ko to matching path ----
-INSTALL_REL="drivers/${CH341_DIR_REL#drivers/}/ch341.ko"
-DEST="/lib/modules/${KREL}/kernel/${INSTALL_REL}"
+# ------------------------------------------------------------
+# 8) Remove brltty
+# ------------------------------------------------------------
+log "Removing brltty..."
+apt-get purge -y brltty || true
+apt-get autoremove -y || true
 
-log "Installing ch341.ko to: ${DEST}"
-install -D -m 644
-::contentReference[oaicite:1]{index=1}
+log "DONE"
+echo "Plug CH341 device and check:"
+echo "  dmesg | tail -100"
+echo "  ls /dev/ttyUSB*"
