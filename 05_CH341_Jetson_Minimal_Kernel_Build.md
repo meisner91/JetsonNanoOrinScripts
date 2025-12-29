@@ -5,6 +5,7 @@ This procedure is inspired by the JetsonHacks tutorials, in particular the video
 
 
 *[Build Jetson Orin Kernel & Modules Now](https://www.youtube.com/watch?v=7P6I2jeJNYo)*
+---
 *[Jetson Orin CH341 USB to Serial Module Install](https://www.youtube.com/watch?v=RHqSR3Wj_K0)*
 from JetsonHacks.
 
