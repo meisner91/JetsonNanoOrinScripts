@@ -1,4 +1,17 @@
 # CH341 – Minimal Kernel Module Build on Jetson Orin Nano
+📺 Inspiration: JetsonHacks – Kernel & Module Build Workflow
+
+This procedure is inspired by the JetsonHacks tutorials, in particular the videos commonly referenced as:
+
+Build Jetson Orin Kernel & Modules Now
+
+Building Kernel Modules on NVIDIA Jetson
+
+from JetsonHacks.
+
+While those tutorials demonstrate full kernel and module builds, the same principles are applied here in a reduced, non-invasive form to build only the CH341 USB-Serial kernel module.
+
+
 This document describes **how the CH341 USB-Serial kernel driver** (commonly used by ESP32,
 Arduino clones, and USB-UART adapters) is built and installed on a **Jetson Orin Nano**.
 
