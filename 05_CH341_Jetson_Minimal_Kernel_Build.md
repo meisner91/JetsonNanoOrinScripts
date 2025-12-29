@@ -1,5 +1,4 @@
-# CH341 – Minimal Kernel Module Build on Jetson Orin Nano (Linux)
-
+# CH341 – Minimal Kernel Module Build on Jetson Orin Nano
 This document describes **how the CH341 USB-Serial kernel driver** (commonly used by ESP32,
 Arduino clones, and USB-UART adapters) is built and installed on a **Jetson Orin Nano**.
 
