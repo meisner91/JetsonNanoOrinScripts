@@ -5,13 +5,12 @@ set -euo pipefail
 # -> extract kernel sources -> enable/build ch341 module -> install -> depmod
 # -> purge brltty
 #
+# Tested logic for Jetson Linux R36.x (e.g., R36.4.4):
+#   https://developer.download.nvidia.com/embedded/L4T/r36_Release_v4.4/sources/public_sources.tbz2
+#
 # Usage:
 #   chmod +x build_ch341.sh
 #   ./build_ch341.sh
-#
-# Notes:
-# - Script will re-run itself with sudo when needed.
-# - It uses /etc/nv_tegra_release to detect the Jetson Linux (L4T) release.
 
 log() { echo -e "\n==> $*\n"; }
 die() { echo "ERROR: $*" >&2; exit 1; }
@@ -39,34 +38,15 @@ REVISION="$(grep -oE 'REVISION: *[0-9]+(\.[0-9]+)+' "${NV_REL_FILE}" | head -n1 
 [[ -n "${R_MAJOR}" ]] || die "Could not parse Rxx from ${NV_REL_FILE}"
 [[ -n "${REVISION}" ]] || die "Could not parse REVISION from ${NV_REL_FILE}"
 
-log "Detected Jetson Linux release: R${R_MAJOR}, REVISION ${REVISION}"
-
-# NVIDIA download URLs observed in the wild:
-# 1) https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.4/sources/public_sources.tbz2
-# 2) https://developer.nvidia.com/embedded/l4t/r36_release_v4.4/sources/public_sources.tbz2
-#
-# We'll try a couple of patterns automatically.
-REV_2DOT="${REVISION}"
-# If revision looks like "4.4.1" and NVIDIA uses "4.4", trim to two components for fallback.
 REV_TRIM2="$(echo "${REVISION}" | awk -F. '{print $1"."$2}')"
 
-URL_CANDIDATES=(
-  "https://developer.nvidia.com/downloads/embedded/l4t/r${R_MAJOR}_release_v${REV_2DOT}/sources/public_sources.tbz2"
-  "https://developer.nvidia.com/embedded/l4t/r${R_MAJOR}_release_v${REV_2DOT}/sources/public_sources.tbz2"
-)
-
-if [[ "${REV_TRIM2}" != "${REVISION}" ]]; then
-  URL_CANDIDATES+=(
-    "https://developer.nvidia.com/downloads/embedded/l4t/r${R_MAJOR}_release_v${REV_TRIM2}/sources/public_sources.tbz2"
-    "https://developer.nvidia.com/embedded/l4t/r${R_MAJOR}_release_v${REV_TRIM2}/sources/public_sources.tbz2"
-  )
-fi
+log "Detected Jetson Linux release: R${R_MAJOR}, REVISION ${REVISION} (using v${REV_TRIM2} for download)"
 
 # ---- 2) Install build dependencies ----
 log "Installing build dependencies..."
 apt-get update -y
 apt-get install -y \
-  ca-certificates curl wget \
+  ca-certificates curl \
   build-essential bc flex bison \
   libssl-dev libelf-dev dwarves \
   bzip2 xz-utils tar
@@ -78,17 +58,12 @@ cd "${WORKDIR}"
 
 PSRC="public_sources.tbz2"
 
-download_ok="false"
-for url in "${URL_CANDIDATES[@]}"; do
-  log "Trying download: ${url}"
-  if curl -fL --retry 3 --retry-delay 2 -o "${PSRC}" "${url}"; then
-    download_ok="true"
-    log "Downloaded: ${PSRC}"
-    break
-  fi
-done
+# NVIDIA R36+ uses developer.download.nvidia.com; capitalization in path matters
+URL="https://developer.download.nvidia.com/embedded/L4T/r${R_MAJOR}_Release_v${REV_TRIM2}/sources/public_sources.tbz2"
 
-[[ "${download_ok}" == "true" ]] || die "Failed to download public_sources.tbz2 from all candidate URLs."
+log "Downloading: ${URL}"
+curl -fL --retry 3 --retry-delay 2 -o "${PSRC}" "${URL}" \
+  || die "Download failed. Check URL or network."
 
 # Quick sanity check: ensure archive is readable
 log "Sanity-checking archive (bzip2 test)..."
