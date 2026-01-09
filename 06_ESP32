@@ -1,0 +1,266 @@
+# ESP32 ↔ Jetson Orin Nano (Ubuntu) + VS Code + PlatformIO
+
+This guide describes the **complete workflow** to connect an **ESP32** to an **NVIDIA Jetson Orin Nano**, upload firmware, and use a **serial monitor** via **VS Code + PlatformIO**.
+
+Assumptions:
+- CH340/CH341 driver is installed
+- `brltty` is disabled
+- OS: Ubuntu (JetPack 6.x)
+
+---
+
+## 1. Verify ESP32 Serial Device
+
+Plug the ESP32 into USB and run:
+
+```bash
+dmesg -w
+```
+
+You should see something like:
+
+```
+ch341-uart converter now attached to ttyUSB0
+```
+
+Check available serial devices:
+
+```bash
+ls -l /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
+```
+
+Most ESP32 boards using CH34x appear as:
+
+```
+/dev/ttyUSB0
+```
+
+---
+
+## 2. Fix Serial Permissions (Required)
+
+Add your user to the `dialout` group:
+
+```bash
+sudo usermod -aG dialout $USER
+```
+
+Log out and log back in (or reboot).
+
+Verify:
+
+```bash
+groups
+```
+
+Check permissions:
+
+```bash
+ls -l /dev/ttyUSB0
+```
+
+Expected:
+
+```
+crw-rw---- 1 root dialout ... /dev/ttyUSB0
+```
+
+---
+
+## 3. (Recommended) Create a Stable udev Symlink
+
+This avoids changing ports like `/dev/ttyUSB0`, `/dev/ttyUSB1`.
+
+### Identify device IDs
+
+```bash
+udevadm info -a -n /dev/ttyUSB0 | less
+```
+
+Look for:
+- `idVendor` (often `1a86`)
+- `idProduct` (often `7523`)
+
+### Create udev rule
+
+```bash
+sudo nano /etc/udev/rules.d/99-esp32-ch34x.rules
+```
+
+Example rule:
+
+```udev
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0666", SYMLINK+="esp32"
+```
+
+Reload rules:
+
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+You now have:
+
+```bash
+/dev/esp32
+```
+
+---
+
+## 4. Install VS Code + PlatformIO
+
+### VS Code
+Install using the official `.deb` package.
+
+### PlatformIO Extension
+
+In VS Code:
+
+- Extensions → search **PlatformIO IDE** → Install
+
+PlatformIO Core installs automatically.
+
+---
+
+## 5. Create a PlatformIO Project
+
+In VS Code:
+
+- Open **PlatformIO Home**
+- Click **New Project**
+- Board: e.g. `esp32dev`, `nodemcu-32s`
+- Framework: **Arduino** or **ESP-IDF**
+
+---
+
+## 6. Configure `platformio.ini`
+
+Example (Arduino + ESP32):
+
+```ini
+[env:esp32dev]
+platform = espressif32
+board = esp32dev
+framework = arduino
+
+upload_port = /dev/esp32
+monitor_port = /dev/esp32
+monitor_speed = 115200
+monitor_filters = esp32_exception_decoder
+```
+
+If you did not create a symlink, use:
+
+```ini
+upload_port = /dev/ttyUSB0
+monitor_port = /dev/ttyUSB0
+```
+
+---
+
+## 7. Upload Firmware
+
+### From VS Code UI
+- Click **Upload →**
+
+### From Terminal
+
+```bash
+pio run -t upload
+```
+
+If upload fails, hold the **BOOT** button on the ESP32 while it says `Connecting...`.
+
+---
+
+## 8. Open Serial Monitor (Listening)
+
+### VS Code UI
+- Click the **Serial Monitor** icon
+
+### Terminal
+
+```bash
+pio device monitor
+```
+
+Or explicitly:
+
+```bash
+pio device monitor -p /dev/esp32 -b 115200
+```
+
+---
+
+## 9. Writing to ESP32 over Serial
+
+In PlatformIO Serial Monitor:
+- Click the input field
+- Type your command
+- Press **Enter** (`\n`)
+
+Firmware must read serial input, e.g. Arduino:
+
+```cpp
+if (Serial.available()) {
+  String cmd = Serial.readStringUntil('\n');
+}
+```
+
+Alternative raw terminal:
+
+```bash
+screen /dev/esp32 115200
+```
+
+Exit `screen`:
+
+```
+Ctrl+A → K → Y
+```
+
+---
+
+## 10. Common Problems & Fixes
+
+### Port Busy
+- Close Serial Monitor before uploading
+- Check:
+
+```bash
+sudo lsof /dev/ttyUSB0
+```
+
+### Upload Timeout
+- Hold **BOOT** during upload start
+- Verify correct board selected
+
+### Garbage Serial Output
+Try different baud rates:
+- `115200`
+- `74880` (ROM boot logs)
+
+Update in `platformio.ini`:
+
+```ini
+monitor_speed = 115200
+```
+
+---
+
+## Final Checklist
+
+- ✔ `/dev/ttyUSB0` or `/dev/esp32` exists
+- ✔ User is in `dialout`
+- ✔ Upload works via PlatformIO
+- ✔ Serial monitor receives logs
+- ✔ Serial input works
+
+---
+
+If you want, I can also provide:
+- ESP-IDF specific workflow
+- micro-ROS over serial
+- Stable multi-ESP32 setups
+- Debugging via JTAG
