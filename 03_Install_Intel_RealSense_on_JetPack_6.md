@@ -62,9 +62,17 @@ Pin librealsense to a known stable version and keep it fixed.
 
 ```bash
 git fetch --tags
-git checkout v2.55.1
+git checkout v2.56.4
 ```
+Debian install of the ROS wrapper which will be installed by ros-humble-librealsense2 using apt
+This version is the one proved working in the video tutorial
+is built and pinned by the ROS build farm
+currently targets librealsense 2.56.4
+installs into /opt/ros/humble
+completely ignores whatever you built in /usr/local
 
+This will cause launching errors especially with IMU data.
+For using the much stabler 2.55.1 consider installing ROS wrapper using source build but check the version compatibility
 🔒 Optional: prevent accidental git updates
 ```bash
 git status
