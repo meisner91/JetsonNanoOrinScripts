@@ -3,6 +3,7 @@ param(
     [string[]] $Args
 )
 
+# === Anpassung an deine Struktur ===
 $ws = "C:\pixi_ws"
 $rosSetup = "C:\pixi_ws\ros2-windows\local_setup.bat"
 
@@ -17,7 +18,6 @@ if (!(Test-Path $rosSetup)) {
 
 Set-Location $ws
 
-# Wenn keine Argumente übergeben wurden: Hilfe anzeigen
 if ($Args.Count -eq 0) {
     Write-Host "Usage examples:"
     Write-Host "  .\ros2pixi.ps1 ros2 --help"
@@ -26,8 +26,14 @@ if ($Args.Count -eq 0) {
     exit 0
 }
 
-# Alles innerhalb pixi + ROS2 ausführen (eine stabile Umgebung)
-$joined = ($Args | ForEach-Object { $_.Replace('"','\"') }) -join ' '
+# Args sicher zu einem Command zusammenbauen (Quotes korrekt behandeln)
+$joined = ($Args | ForEach-Object {
+    # Nur doppelte Anführungszeichen escapen für cmd.exe
+    $_.Replace('"', '\"')
+}) -join ' '
 
+# cmd.exe Kommando: zuerst ROS env, dann den gewünschten Befehl
 $cmd = "call `"$rosSetup`" && $joined"
+
+# Alles innerhalb pixi + cmd ausführen (stabile Umgebung)
 pixi run -- cmd /c $cmd
